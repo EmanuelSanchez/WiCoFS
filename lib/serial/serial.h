@@ -25,8 +25,22 @@ void SerialInit(void )  // Initialize the serial comunication
 #else
     UCSR0A &= ~_BV(U2X0);
 #endif
-   UCSR0B = BVV(TXEN0, 1) | BVV(RXEN0, 0); // Enable Tx and disable Rx
+   UCSR0B = BVV(TXEN0, 1) | BVV(RXEN0, 1); // Enable Tx and disable Rx
    //UCSR0C = BVV(USBS0, 1) | BVV(UCSZ00, 3); // Set frame format: 8 data, 2 stop bit
+   UCSR0C = BVV(UMSEL01,0) | BVV(UMSEL00,0) | BVV(UCSZ00,1) | BVV(UCSZ01,1);
+}
+
+char string_receiver(void)   // Receive a character or a string
+{
+        while(!(UCSR0A & _BV(RXC0)))( // Wait for data to be received
+            int i=0;
+            char msg[10];
+            while(UDR0 != "\n")(
+                msg[i]=UDR0;
+                i++;
+            ));
+            return UDR0;// Get and return received data from buffer
+
 }
 
 void send_string(const char *s)   // Send a character o array of characters (string)
