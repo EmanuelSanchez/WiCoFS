@@ -32,14 +32,9 @@ void SerialInit(void )  // Initialize the serial comunication
 
 char string_receiver(void)   // Receive a character or a string
 {
-        while(!(UCSR0A & _BV(RXC0)))( // Wait for data to be received
-            int i=0;
-            char msg[10];
-            while(UDR0 != "\n")(
-                msg[i]=UDR0;
-                i++;
-            ));
-            return UDR0;// Get and return received data from buffer
+        while(!(UCSR0A & _BV(RXC0))){ // Wait for data to be received
+        }
+        return UDR0;// Get and return received data from buffer
 
 }
 
@@ -52,12 +47,26 @@ void send_string(const char *s)   // Send a character o array of characters (str
     }
 }
 
+void send_stringln(const char *s)   // Send a character o array of characters (string)
+{
+    send_string(s);
+    send_string("\n");
+}
+
 void send_number(const int value)
 {
   char buffer[100];         //the ASCII of the integer will be stored in this char array
 
   itoa(value,buffer,10); // (integer, yourBuffer, base)
   send_string(buffer);  // itoa funciont convert an int to string
+}
+
+void send_numberln(const int value)
+{
+  char buffer[100];         //the ASCII of the integer will be stored in this char array
+
+  itoa(value,buffer,10); // (integer, yourBuffer, base)
+  send_stringln(buffer);  // itoa funciont convert an int to string
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
