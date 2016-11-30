@@ -9,13 +9,19 @@
 #####################################################################
 
 import serial
-import pykeyboard
 import sys
+import subprocess
+import argparse
+import time
 from pymouse import PyMouse
+from pykeyboard import PyKeyboard
 
-# global variables to screen limits
+# global variables
 x_limit = 0
 y_limit = 0
+virtual_mouse = 0
+virtual_keyboard = 0
+port = 0
 
 # class to print with colors
 class pcolors:
@@ -28,30 +34,14 @@ class pcolors:
     BOLD = '\033[1m'        # brown
     UNDERLINE = '\033[4m'
 
-# code to remenber some functions (trash)
-def backup ():
-    m = PyMouse()
-    m.click(500,300,1)
-    a, b = m.screen_size()
-    print(a)
-    print(b)
-    print(type(a),type(b))
-    a = int(a/2)
-    b = int(b/2)
-    print(type(a))
-    print(type(b))
-    m.move(a,b)
-    print(m.position())
+        # except:
+        #     exitMessage()
 
 # Open and configure the seial comunication
 def openSerial():
-    # while(1):
-    #         port = serial.Serial()
-    #         port.baudrate = 9600        # set the baudrate
-    #         port.timeout = 1            # timeout = 1s
-    #         port.port = '/dev/ttyUSB0'  # set port
-    #         port.open()
-    #         print(port.readline())
+    timeout = 20
+    cycles_counter = 0
+    warnig_flag = 1
     while(1):
         try:    # try to open the serial port
             port = serial.Serial()
@@ -59,11 +49,16 @@ def openSerial():
             port.timeout = 1            # timeout = 1s
             port.port = '/dev/ttyUSB0'  # set port
             port.open()
-            # print(port.readline())
-            print("Serial Port: " + port.portstr + pcolors.OKGREEN + "\t\tConected" + pcolors.ENDC)
             break
+        except (KeyboardInterrupt, SystemExit):
+            raise
         except:
-            print("Waiting for Serial Port...")
+            if warnig_flag:
+                print(pcolors.WARNING+"Waiting for Serial Port..."+pcolors.ENDC)
+            cycles_counter += 1
+            warnig_flag = 0
+            if(cycles_counter > timeout):
+                raise SystemExit(pcolors.FAIL+"Serial port does not respond"+pcolors.ENDC)
 
     return port
 
@@ -72,45 +67,113 @@ def map(x, in_min, in_max, out_min, out_max):
     return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
 #read new position from the Arduino and update it
-def read_data(port):
-    print("Waiting synchronization command...")
-    # print(port.readline().decode('utf-8'))
-    while(port.readline().decode('utf-8') !=  "c\n"):
+def read_data():
+    while(port.readline().decode('utf-8') !=  "s\n"):
+        print("Waiting synchronization command...")
         pass
-    print("Synchronization command ... " + pcolors.OKGREEN + "\t OK" + pcolors.ENDC)
+    print(pcolors.OKGREEN + "\t OK: " + pcolors.ENDC, end='')
     values = port.readline().decode('utf-8').split(',') # read tilts from the serial port (format: strings)
-    roll = float(values[0])  # convert tilts from strings to int
-    pitch = float(values[1])
-    sharp = float(values[2])
+    roll = int(values[0])  # convert tilts from strings to int
+    pitch = int(values[1])
+    ultrasoundValue = int(values[2])
 
-    # while(1):
-    #     try:    # try to read the complete line
-    #         values = port.readline().decode('utf-8').split(',') # read tilts from the serial port (format: strings)
-    #         roll = float(values[0])  # convert tilts from strings to int
-    #         pitch = float(values[1])
-    #         sharp = float(values[2])
-    #         #print("Roll: " + str(roll) + "\tPitch: " + str(pitch) + "\tSharp: " + str(sharp))
-    #         break
-    #     except: # if not read the complete line, try again
-    #         pass
+    return roll, pitch, ultrasoundValue
 
-    # if(roll < -90.0 | roll > 90.0):       # limits evaluation
-    #     print(pcolors.FAIL + "Error in roll value" + pcolors.ENDC)
-    # if(pitch < -90.0 | pitch > 90.0):
-    #     print(pcolors.FAIL + "Error in Y value" + pcolors.ENDC)
+def read_4data():
+    request()
+    values = port.readline().decode('utf-8').split(',') # read tilts from the serial port (format: strings)
+    values[0] = float(values[0])
+    values[1] = float(values[1])
+    values[2] = float(values[2])
+    values[3] = float(values[3])
+    waitResponse()
+    return values[0], values[1], values[2], values[3]
 
-    return roll, pitch, sharp
+def exitMessage():
+    print("\n\n" + pcolors.FAIL + "Exit From Virtual Mouse..." + pcolors.ENDC)
+    print("Help: virtualmouse.py -h\n")
+    print("Created by:")
+    print("\tEmanuel Sánchez\n\tAlejandro Cabezas" + pcolors.ENDC+"\n\n")
+    sys.exit(1)
 
-def main():
+def slaveInit():
+    msg_out = 'b'
+    port.write(msg_out.encode())
+    while(port.readline().decode('utf-8') !=  "y\n"):
+        port.write(msg_out.encode())
+
+def request():
+    msg_out = 'r'
+    port.write(msg_out.encode())
+    while(port.readline().decode('utf-8') !=  "o\n"):
+        port.write(msg_out.encode())
+
+def waitResponse():
+    msg_out = 'w'
+    port.write(msg_out.encode())
+    while(port.readline().decode('utf-8') !=  "e\n"):
+        port.write(msg_out.encode())
+
+def operatingModeNormal():
+    msg_out = 'n'
+    port.write(msg_out.encode())
+    while(port.readline().decode('utf-8') !=  "n\n"):
+        port.write(msg_out.encode())
+
+def operatingModeCalibrate():
+    msg_out = 'c'
+    port.write(msg_out.encode())
+    while(port.readline().decode('utf-8') !=  "c\n"):
+        port.write(msg_out.encode())
+
+def barLoad(bar_width):
+    # setup toolbar
+    sys.stdout.write("[%s]" % (" " * bar_width))
+    sys.stdout.flush()
+    sys.stdout.write("\b" * (bar_width+1)) # return to start of line, after '['
+    for i in range(bar_width):
+        time.sleep(1) # wait a secod (time to wait the slave calibration)
+        # update the bar
+        sys.stdout.write("-")
+        sys.stdout.flush()
+
+    sys.stdout.write("\n")
+
+def initialRoutine():
     global x_limit, y_limit # declare global variables to change in this function
+    global virtual_mouse, virtual_keyboard
+    global port
 
-    print("\n" + pcolors.OKBLUE + "Begining..." + pcolors.ENDC +"\n")   # initial message
+    print(pcolors.HEADER+"In Initial Routine:\t"+pcolors.ENDC)
+
+    timeout = 5 # 100 attempts (cycles)
+    cycles_counter = 0
+    warnig_flag = 1
 
     port = openSerial() # open serial port comunication
+    print("\tSerial Port: " + port.portstr + pcolors.OKGREEN + "\tConected" + pcolors.ENDC)
+    # Send initial command
+    print("\tSending initial command to slave...")
+    while(1):
+        try:
+            slaveInit()
+            break
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            if warnig_flag:
+                print(pcolors.WARNING+"\tWaiting slave response"+pcolors.ENDC)
+            warnig_flag = 0
+            cycles_counter += 1
+            if(cycles_counter > timeout):
+                raise SystemExit(pcolors.FAIL+"Slave does not reponded"+pcolors.ENDC)
+    print("  \tSlave response:" + pcolors.OKGREEN + " OK" + pcolors.ENDC)
+
     virtual_mouse = PyMouse()   # vitual mouse declaration
+    virtual_keyboard = PyKeyboard() # virtual keyboard declaration
     x_limit, y_limit = virtual_mouse.screen_size()  # set the screen limits
 
-    print(pcolors.WARNING + "WARNING: screen size: " + str(x_limit) + "x" + str(y_limit) + pcolors.ENDC)
+    print(pcolors.WARNING + "\n\tWARNING: screen size: " + str(x_limit) + "x" + str(y_limit))
 
     x_limit, y_limit = x_limit-1, y_limit-1
 
@@ -118,44 +181,74 @@ def main():
     y_center = int(y_limit/2)
     virtual_mouse.move(x_center, y_center)
 
-    print("\nMouse Initial Position: " + str(virtual_mouse.position()) + "\n")     # show the mouse position
+    print("\tMouse Initial Position: " + str(virtual_mouse.position()) + pcolors.ENDC + "\n")     # show the mouse position
 
+    return port, x_limit, y_limit
+
+def calibrationRoutine():
+    print(pcolors.HEADER+"In Calibration Routine:\t"+pcolors.ENDC)
+    print("\tCalibrating X, Y axis and ultrasound:")
+    #print("\tKeep both hands horizontally")
+    print(pcolors.OKBLUE+"\nMANTENGA LAS MANOS HORIZONTALMENTE"+pcolors.ENDC)
+    request()
+    barLoad(5)
+    waitResponse()
+    print(pcolors.OKGREEN + "\tOK" + pcolors.ENDC)
+    print("\tCalibrating Accelerometer: Z axis:")
+    #print("\tTilt your right hand to the right (vertically)")
+    print(pcolors.OKBLUE+"\nINCLINE SU MANO A LA DERECHA (VERTICALMENTE)"+pcolors.ENDC)
+    request()
+    barLoad(5)
+    waitResponse()
+    print(pcolors.OKGREEN + "\tOK" + pcolors.ENDC)
+    xZero, yZero, zZero, ultrasoundZero = read_4data()
+    print("\tx-zero: " + str(xZero))
+    print("\ty-zero: " + str(yZero))
+    print("\tz-zero: " + str(zZero))
+    print("\tultrasound-zero: " + str(0))
+
+def adquisitionLoop(x_limit, y_limit):
+    print(pcolors.HEADER+"In Adquisition Loop:\t"+pcolors.ENDC)
     while(1):   # loop to read serial port and update the mouse position
         try:
-            roll, pitch, sharp = read_data(port)
-
+            roll, pitch, ultrasoundValue = read_data()
+            print(roll, pitch, ultrasoundValue)
             x_value = map(roll, -90.0, 90.0, 0, x_limit-1)
             y_value = map(pitch, -90.0, 90.0, 0, y_limit-1)
 
             x = int(x_value)
             y = int(y_value)
 
-            # if(x>=x_limit):      # verify screen limits and correct 'x' and 'y' position
-            #     x = x_limit-1
-            # elif(x<0):
-            #     x = 0
-            # if(y>=y_limit):
-            #     y = y_limit-1
-            # elif(y<0):
-            #     y=0
-
-            print(x,y)
-
             virtual_mouse.move(x,y)
+
+            if(ultrasoundValue>5):
+                virtual_keyboard.press_key("Page_Up")
+            elif(ultrasoundValue<-5):
+                virtual_keyboard.press_key("Page_Down")
+        except (KeyboardInterrupt, SystemExit):
+            exitMessage()
+            raise
         except:
-            print("\n\n" + pcolors.WARNING + "Exit From Virtual Mouse...\n\n" + pcolors.ENDC)
-            print("Created by:")
-            print(pcolors.OKBLUE + "\tEmanuel Sánchez\n\tAlejandro Cabezas" + pcolors.ENDC+"\n\n")
-            sys.exit(1)
+            pass
 
     port.close()
 
-# function to proof the set virtual mouse position
-def proof():
-    m = PyMouse()
-    a, b = m.screen_size()
-    print(m.screen_size())
-    m.move(0,0)
-
-if __name__ == "__main__":
-    main()
+parser = argparse.ArgumentParser(description='This is a Flight Simulator Control Program')
+parser.add_argument('-r', action='store_false', default=False,
+                    dest='boolean_switch',
+                    help='Run controls with default calibration')
+parser.add_argument('-c', action='store_true', default=False,
+                    dest='boolean_switch',
+                    help='Run controls with a calibration routine')
+args = parser.parse_args()
+if not(args.boolean_switch):
+    print(pcolors.OKBLUE + "\nNORMAL-MODE" + pcolors.ENDC)
+    port, x_limit, y_limit = initialRoutine()
+    operatingModeNormal()
+    adquisitionLoop(x_limit, y_limit)
+else:
+    print(pcolors.OKBLUE + "\nCALIBRATE-MODE" + pcolors.ENDC)
+    port, x_limit, y_limit = initialRoutine()
+    operatingModeCalibrate()
+    calibrationRoutine()
+    adquisitionLoop(x_limit, y_limit)
