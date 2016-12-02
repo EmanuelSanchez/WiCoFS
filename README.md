@@ -6,9 +6,9 @@ It contains some libraries and scripts to program the Atmega328 in pure C and tr
 ### Software Requirements ###
 
 Python3:
-    -PyMouse library
-    -PyKeyboard library
-    -PySerial library
+   -PyMouse library
+   -PyKeyboard library
+   -PySerial library
 
 
 ### Aditional Information ###
