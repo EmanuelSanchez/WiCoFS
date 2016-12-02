@@ -1,6 +1,7 @@
-# Arduino in C #
+# WiCoFS #
+## Wireless control for the flight simulator of google earth##
 
-Some libraries to program the Atmega328 in C pure
+Contain some libraries to program the Atmega328 in C pure
 
 ### Aditional Information ###
 
