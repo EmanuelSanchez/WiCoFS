@@ -32,16 +32,22 @@ const float pi = 3.14;
 // #define xZero_default 325
 // #define yZero_default 397
 // #define zZero_default 410
+// values to USB power 2
+// #define xZero_default 104  111  323
+// #define yZero_default 431  432  430
+// #define zZero_default 437  440  430
+//values to battery power
+// #define xZero_default 325
+// #define yZero_default 397
+// #define zZero_default 485
+// #define xZero_default 320
+// #define yZero_default 397
+// #define zZero_default 408
 
 //values to battery power
-#define xZero_default 325
-#define yZero_default 397
-#define zZero_default 485
-
-//values to battery power
-float xZero = xZero_default;
-float yZero = yZero_default;
-float zZero = zZero_default;
+float xZero = 320;
+float yZero = 397;
+float zZero = 408;
 
 // acceleration varables
 float xAcc;
@@ -107,10 +113,13 @@ long pulsewidth(int pin, bool state){
 void read_accelerometer(){
   // read the data from de accelerometer
   Analog_INPUT0();
+  // xAcc=Analog_read();
   xAcc=((Analog_read())-xZero)/(sensibility);
   Analog_INPUT1();
+  // yAcc=Analog_read();
   yAcc=((Analog_read())-yZero)/(sensibility);
   Analog_INPUT2();
+  // zAcc=Analog_read();
   zAcc=((Analog_read())-zZero)/(sensibility);
 }
 
@@ -161,6 +170,15 @@ void send_data(){
   send_numberln(ultrasoundValue-ultrasoundZero);
 }
 
+void send_data1(){
+  send_stringln("s");
+  send_number(xAcc_f);
+  send_string(",");
+  send_number(yAcc_f);
+  send_string(",");
+  send_numberln(zAcc_f);
+}
+
 void send_4data(int value1, int value2, int value3, int value4){
   waitRequest();
   send_number(value1);
@@ -205,7 +223,7 @@ void calibration_routine(){
     readingx += Analog_read();
     Analog_INPUT1();
     readingy += Analog_read();
-    // read_ultrasound();
+    read_ultrasound();
     readingultrasound += ultrasoundValue;
   }
 
@@ -267,10 +285,16 @@ void loop()
 {
   //read the sensor
   read_accelerometer();
-  //read_ultrasound();
+  read_ultrasound();
   //low pass filter
   lpf();
   pitch_calculate();
   roll_calculate();
   send_data();
+  // send_stringln("Datos:");
+  // send_number(xACC_f);
+  // send_string(",");
+  // send_number(pitch);
+  // send_string(",");
+  // send_numberln(ultrasoundValue);
 }

@@ -23,6 +23,9 @@ virtual_mouse = 0
 virtual_keyboard = 0
 port = 0
 
+count1 = 0
+count2 = 0
+
 # class to print with colors
 class pcolors:
     HEADER = '\033[95m'     # violet
@@ -208,6 +211,7 @@ def calibrationRoutine():
     print("\tultrasound-zero: " + str(0))
 
 def adquisitionLoop(x_limit, y_limit):
+    global count1, count2
     print(pcolors.HEADER+"In Adquisition Loop:\t"+pcolors.ENDC)
     while(1):   # loop to read serial port and update the mouse position
         try:
@@ -220,11 +224,34 @@ def adquisitionLoop(x_limit, y_limit):
             y = int(y_value)
 
             virtual_mouse.move(x,y)
-
-            if(ultrasoundValue>5):
-                virtual_keyboard.press_key("Page_Up")
-            elif(ultrasoundValue<-5):
-                virtual_keyboard.press_key("Page_Down")
+            if(ultrasoundValue>1):
+                count1 = count1 + 1
+                print(count1)
+                if(count1 > 20):
+                    count1 = 18
+                else:
+                    virtual_keyboard.press_key("Page_Up")
+                    pass
+            elif(ultrasoundValue<-1):
+                print(count1)
+                count1 = count1 - 1
+                if(count1 < -20):
+                    count1 = -18
+                else:
+                    virtual_keyboard.press_key("Page_Down")
+                    pass
+            # if(ultrasoundValue>2):
+            #     count2 = 0
+            #     count1 = count1 + 1
+            #     if(count1 > 5):
+            #         virtual_keyboard.press_key("Page_Up")
+            #         count = 0
+            # elif(ultrasoundValue<-2):
+            #     count1 = 0
+            #     count2 = count2 + 1
+            #     if(count2 < 5):
+            #         virtual_keyboard.press_key("Page_Down")
+            #         count = 0
         except (KeyboardInterrupt, SystemExit):
             exitMessage()
             raise
