@@ -1,5 +1,5 @@
 # WiCoFS #
-## Wireless control for the flight simulator of google earth##
+## Wireless Control for the Flight Simulator of Google Earth##
 
 Contain some libraries to program the Atmega328 in C pure
 
