@@ -1,16 +1,17 @@
 # WiCoFS #
+========================================================================
 ## Wireless Control for the Flight Simulator of Google Earth##
 
 It contains some libraries and scripts to program the Atmega328 in pure C and transmit data to a script in python and thus make a virtual keyboard and virtual mouse to control the flight simulator.
 
-The entire project was developed in the Open Source Atom editor, this is the reason for the layout of the folders. However, it can be easily imported into the Arduino IDE.
+The entire project was developed in the Open Source Atom editor  through the Platformio package, this is the reason for the layout of the folders. However, it can be easily imported into the Arduino IDE.
 
 ### Software Requirements ###
 
 Python3:
-...PyMouse library
-...PyKeyboard library
-...PySerial library
+- PyMouse library
+- PyKeyboard library
+- PySerial library
 
 
 ### Aditional Information ###
